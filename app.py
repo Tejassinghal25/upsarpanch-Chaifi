@@ -809,10 +809,51 @@ with tab_sales:
             )
 
     if ws is not None:
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-        if st.button("🔄  Refresh from Google Sheets"):
-            load_bills_from_sheet.clear()
-            st.rerun()
+        st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("<div class='section-title'>⚙️ Sheet Management</div>", unsafe_allow_html=True)
+
+        m1, m2 = st.columns(2, gap="medium")
+        with m1:
+            if st.button("🔄  Refresh from Google Sheets", use_container_width=True):
+                load_bills_from_sheet.clear()
+                st.rerun()
+        with m2:
+            if st.button("🗑️  Reset All Sheet Data", use_container_width=True):
+                st.session_state["confirm_reset"] = True
+
+        if st.session_state.get("confirm_reset", False):
+            st.markdown(
+                "<div style='background:#fff5f5;border:1.5px solid #f44336;border-radius:12px;"
+                "padding:16px 20px;margin-top:12px'>"
+                "<div style='font-weight:700;color:#c62828;font-size:.9rem;margin-bottom:6px'>"
+                "⚠️ Are you sure you want to reset all data?</div>"
+                "<div style='font-size:.8rem;color:#888'>This will permanently delete all bill records "
+                "from the Google Sheet and reset the bill counter to #1001. "
+                "This cannot be undone.</div>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+            st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+            c1, c2 = st.columns(2, gap="medium")
+            with c1:
+                if st.button("✅  Yes, Reset Everything", use_container_width=True):
+                    try:
+                        ws.clear()
+                        ws.append_row(SHEET_HEADERS)
+                        st.session_state.bill_counter   = 1001
+                        st.session_state.pending_orders = []
+                        st.session_state.cart           = {}
+                        st.session_state["confirm_reset"] = False
+                        load_bills_from_sheet.clear()
+                        st.success("✅ Sheet reset! Bill counter starts from #1001.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Reset failed: {e}")
+            with c2:
+                if st.button("✕  Cancel", use_container_width=True):
+                    st.session_state["confirm_reset"] = False
+                    st.rerun()
 
 # ── Footer ─────────────────────────────────────────────────────────────────────
 st.markdown(
