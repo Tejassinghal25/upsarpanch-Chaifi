@@ -420,6 +420,15 @@ def append_bill_to_sheet(ws, bill):
         bill.get("payment_mode", "Cash"),
     ], value_input_option="USER_ENTERED")
 
+def delete_bill_by_id(ws, bill_no):
+    """Find the row with this bill_no and delete it from the sheet."""
+    col_values = ws.col_values(1)          # column A = Bill No (includes header)
+    for idx, val in enumerate(col_values):
+        if str(val).strip() == str(bill_no).strip():
+            ws.delete_rows(idx + 1)        # gspread rows are 1-indexed
+            return True
+    return False
+
 @st.cache_data(ttl=30, show_spinner=False)
 def load_bills_from_sheet(_ws):
     bills = []
@@ -445,6 +454,7 @@ if "cart"           not in st.session_state: st.session_state.cart = {}
 if "bill_counter"   not in st.session_state: st.session_state.bill_counter = None
 if "pending_orders" not in st.session_state: st.session_state.pending_orders = []
 if "confirm_reset"  not in st.session_state: st.session_state.confirm_reset = False
+if "confirm_delete" not in st.session_state: st.session_state.confirm_delete = None  # stores bill_no to delete
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 ALL_ITEMS = {k: v for cat in MENU.values() for k, v in cat.items()}
@@ -1082,14 +1092,98 @@ with tab_sales:
                 st.rerun()
         with m2:
             if st.button("🗑️  Reset All Sheet Data", use_container_width=True):
-                st.session_state.confirm_reset = True
+                st.session_state.confirm_reset  = True
+                st.session_state.confirm_delete = None
 
+        # ── Delete single order ───────────────────────────────────────────────
+        st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
+        st.markdown(
+            "<div style='background:#fff;border:1px solid #e8dcc8;border-radius:14px;padding:16px 18px'>"
+            "<div style='font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;"
+            "color:#c8b090;margin-bottom:10px'>🗑 Delete a Specific Order</div>",
+            unsafe_allow_html=True,
+        )
+        del1, del2 = st.columns([2, 1], gap="medium")
+        with del1:
+            # Show dropdown of existing bill numbers for easy selection
+            existing_ids = sorted([b["bill_no"] for b in all_bills], reverse=True)
+            if existing_ids:
+                selected_id = st.selectbox(
+                    "Select Order ID to delete",
+                    options=existing_ids,
+                    format_func=lambda x: f"#{x}",
+                    key="del_order_sel",
+                    label_visibility="collapsed",
+                )
+            else:
+                st.markdown("<p style='font-size:.8rem;color:#c8b090'>No orders in sheet yet.</p>", unsafe_allow_html=True)
+                selected_id = None
+        with del2:
+            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+            if selected_id and st.button("🗑  Delete Order", use_container_width=True):
+                st.session_state.confirm_delete = selected_id
+                st.session_state.confirm_reset  = False
+
+        # Preview the selected order
+        if selected_id and st.session_state.confirm_delete != selected_id:
+            matched = [b for b in all_bills if b["bill_no"] == selected_id]
+            if matched:
+                b = matched[0]
+                items_preview = ", ".join(f"{clean(n)} x{q}" for n, q in b["items"].items())
+                st.markdown(
+                    f"<div style='background:#fffbf4;border:1px solid #f0e4cc;border-radius:10px;"
+                    f"padding:10px 14px;margin-top:8px;font-size:.8rem'>"
+                    f"<b style='color:#b8720a'>#{b['bill_no']}</b>"
+                    f"&nbsp;·&nbsp;<span style='color:#b8a080'>{b['timestamp'].strftime('%d %b %Y %I:%M %p')}</span>"
+                    f"&nbsp;·&nbsp;{b['customer']}"
+                    f"<br><span style='color:#a89878'>{items_preview}</span>"
+                    f"&nbsp;&nbsp;<b style='color:#b8720a'>Rs {b['total']}</b>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # ── Delete confirmation ───────────────────────────────────────────────
+        if st.session_state.confirm_delete is not None:
+            del_id = st.session_state.confirm_delete
+            st.markdown(
+                f"<div style='background:#fff5f5;border:1.5px solid #f44336;border-radius:12px;"
+                f"padding:16px 20px;margin-top:10px'>"
+                f"<div style='font-weight:700;color:#c62828;font-size:.9rem;margin-bottom:6px'>"
+                f"⚠️ Delete Order #{del_id}?</div>"
+                f"<div style='font-size:.8rem;color:#888'>"
+                f"This will permanently remove Bill #{del_id} from the Google Sheet. This cannot be undone.</div>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+            st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+            dc1, dc2 = st.columns(2, gap="medium")
+            with dc1:
+                if st.button(f"✅  Yes, Delete #{del_id}", use_container_width=True):
+                    try:
+                        deleted = delete_bill_by_id(ws, del_id)
+                        if deleted:
+                            load_bills_from_sheet.clear()
+                            st.session_state.confirm_delete = None
+                            st.success(f"✅ Order #{del_id} deleted from Google Sheet.")
+                            st.rerun()
+                        else:
+                            st.error(f"Order #{del_id} not found in sheet.")
+                    except Exception as e:
+                        st.error(f"Delete failed: {e}")
+            with dc2:
+                if st.button("✕  Cancel", key="cancel_delete", use_container_width=True):
+                    st.session_state.confirm_delete = None
+                    st.rerun()
+
+        # ── Reset all ─────────────────────────────────────────────────────────
         if st.session_state.confirm_reset:
             st.markdown(
                 "<div style='background:#fff5f5;border:1.5px solid #f44336;border-radius:12px;"
                 "padding:16px 20px;margin-top:12px'>"
                 "<div style='font-weight:700;color:#c62828;font-size:.9rem;margin-bottom:6px'>"
-                "⚠️ Are you sure you want to reset all data?</div>"
+                "⚠️ Are you sure you want to reset ALL data?</div>"
                 "<div style='font-size:.8rem;color:#888'>This will permanently delete all bill records "
                 "from the Google Sheet and reset the bill counter to #1001. This cannot be undone.</div>"
                 "</div>",
