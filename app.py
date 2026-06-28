@@ -11,24 +11,24 @@ st.set_page_config(page_title="ChaiFi – Billing", page_icon="☕", layout="wid
 # ── Menu ──────────────────────────────────────────────────────────────────────
 MENU = {
     "🍵 Beverages": {
-        "Spl Gud ki Chai (Cup)":            15,
-        "Spl Gud ki Chai (Khulad)":         20,
-        "Lemon / Green / Black Tea":        30,
-        "Cold Coffee ⭐ Must Try":           70,
-        "Spl Masala Banta Soda ⭐":         40,
-        "Regular Lassi":                    50,
-        "Mango Lassi":                      60,
-        "Kesar Badam Lassi":                70,
+        "Spl Gud ki Chai (Cup)":             15,
+        "Spl Gud ki Chai (Khulad)":          20,
+        "Lemon / Green / Black Tea":         30,
+        "Cold Coffee ⭐ Must Try":            70,
+        "Spl Masala Banta Soda ⭐":          40,
+        "Regular Lassi":                     50,
+        "Mango Lassi":                       60,
+        "Kesar Badam Lassi":                 70,
     },
     "🍽️ Food Items": {
-        "Bun Maska":                        40,
-        "Plain Maggi":                      50,
-        "Veg Maggi":                        60,
-        "Grilled Aaloo Stuffed Patties ⭐": 60,
-        "Grilled Paneer Stuffed Patties ⭐":70,
-        "Butter Masala Sweet Corn (S)":     50,
-        "Butter Masala Sweet Corn (L)":     70,
-        "Kulcha Pizza 🆕":                 100,
+        "Bun Maska":                         40,
+        "Plain Maggi":                       50,
+        "Veg Maggi":                         60,
+        "Grilled Aaloo Stuffed Patties ⭐":  60,
+        "Grilled Paneer Stuffed Patties ⭐": 70,
+        "Butter Masala Sweet Corn (S)":      50,
+        "Butter Masala Sweet Corn (L)":      70,
+        "Kulcha Pizza 🆕":                  100,
     },
 }
 
@@ -38,141 +38,89 @@ SHEET_NAME         = "ChaiFi_Bills"
 WORKSHEET_NAME     = "Bills"
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CSS  –  clean white theme
+# CSS
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 * { box-sizing: border-box; }
-
-/* ── Base ── */
 .stApp { background: #f5f5f0; color: #1a1a1a; font-family: 'Sora', sans-serif; }
 #MainMenu, footer, header { visibility: hidden; }
+
+/* hide sidebar entirely */
+[data-testid="stSidebar"] { display: none !important; }
+[data-testid="collapsedControl"] { display: none !important; }
+
 .block-container { padding: 0 2rem 2rem 2rem !important; max-width: 1400px; }
-
-/* ── Sidebar ── */
-[data-testid="stSidebar"] {
-    background: #ffffff !important;
-    border-right: 1px solid #e8e4dc !important;
-    padding-top: 0 !important;
-}
-[data-testid="stSidebar"] > div { padding-top: 0 !important; }
-[data-testid="stSidebar"] * { color: #1a1a1a !important; font-family: 'Sora', sans-serif !important; }
-
-.sidebar-banner {
-    background: linear-gradient(135deg, #b8720a 0%, #e8a020 60%, #f5c842 100%);
-    margin: -1rem -1rem 1.5rem -1rem;
-    padding: 1.6rem 1.2rem 1.3rem;
-    text-align: center;
-}
-.sidebar-banner h2 { color: #fff !important; font-size: 1.1rem !important; font-weight: 800 !important; margin: 0 !important; letter-spacing: 0.04em; text-shadow: 0 1px 4px rgba(0,0,0,.2); }
-.sidebar-banner p  { color: rgba(255,255,255,.8) !important; font-size: 0.7rem !important; margin: 3px 0 0 !important; }
 
 /* ── Inputs ── */
 input, textarea, div[data-baseweb="input"] input {
-    background: #f9f8f5 !important;
-    color: #1a1a1a !important;
-    border-color: #ddd !important;
-    border-radius: 10px !important;
+    background: #fff !important; color: #1a1a1a !important;
+    border-color: #e0ddd8 !important; border-radius: 10px !important;
     font-family: 'Sora', sans-serif !important;
 }
 .stSelectbox > div > div {
-    background: #f9f8f5 !important;
-    border-color: #ddd !important;
-    border-radius: 10px !important;
-    color: #1a1a1a !important;
+    background: #fff !important; border-color: #e0ddd8 !important;
+    border-radius: 10px !important; color: #1a1a1a !important;
 }
 input[type="number"] {
-    background: #f9f8f5 !important;
-    color: #1a1a1a !important;
-    border: 1px solid #ddd !important;
-    border-radius: 10px !important;
+    background: #fff !important; color: #1a1a1a !important;
+    border: 1px solid #e0ddd8 !important; border-radius: 10px !important;
 }
 label, .stSelectbox label, .stNumberInput label, .stTextInput label {
-    color: #999 !important;
-    font-size: 0.72rem !important;
-    font-weight: 600 !important;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
+    color: #999 !important; font-size: 0.72rem !important;
+    font-weight: 600 !important; text-transform: uppercase; letter-spacing: 0.07em;
 }
 
 /* ── Buttons ── */
 .stButton > button {
     background: linear-gradient(135deg, #b8720a, #e8a020, #f5c842) !important;
-    color: #fff !important;
-    font-weight: 700 !important;
-    font-family: 'Sora', sans-serif !important;
-    border: none !important;
-    border-radius: 10px !important;
-    padding: 0.55rem 1.2rem !important;
-    font-size: 0.88rem !important;
-    transition: all 0.2s ease !important;
+    color: #fff !important; font-weight: 700 !important;
+    font-family: 'Sora', sans-serif !important; border: none !important;
+    border-radius: 10px !important; padding: 0.55rem 1.2rem !important;
+    font-size: 0.88rem !important; transition: all 0.2s ease !important;
     box-shadow: 0 2px 10px rgba(184,114,10,.2) !important;
 }
 .stButton > button:hover { transform: translateY(-1px) !important; box-shadow: 0 4px 16px rgba(184,114,10,.35) !important; }
 
 .stDownloadButton > button {
-    background: #fff !important;
-    color: #b8720a !important;
-    border: 1.5px solid #b8720a !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
-    font-family: 'Sora', sans-serif !important;
-    font-size: 0.85rem !important;
-    transition: all 0.2s !important;
+    background: #fff !important; color: #b8720a !important;
+    border: 1.5px solid #b8720a !important; border-radius: 10px !important;
+    font-weight: 600 !important; font-family: 'Sora', sans-serif !important;
+    font-size: 0.85rem !important; transition: all 0.2s !important;
 }
 .stDownloadButton > button:hover { background: #b8720a !important; color: #fff !important; }
 
 /* ── Tabs ── */
 [data-testid="stTabs"] [role="tablist"] {
-    background: #fff;
-    border-radius: 12px;
-    padding: 4px;
-    border: 1px solid #e8e4dc;
-    gap: 4px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    background: #fff; border-radius: 12px; padding: 4px;
+    border: 1px solid #e8e4dc; gap: 4px; box-shadow: 0 1px 4px rgba(0,0,0,.06);
 }
 button[data-baseweb="tab"] {
-    background: transparent !important;
-    color: #aaa !important;
-    border-radius: 8px !important;
-    font-family: 'Sora', sans-serif !important;
-    font-weight: 600 !important;
-    font-size: 0.85rem !important;
-    padding: 0.5rem 1.2rem !important;
-    transition: all 0.2s !important;
-    border: none !important;
+    background: transparent !important; color: #aaa !important;
+    border-radius: 8px !important; font-family: 'Sora', sans-serif !important;
+    font-weight: 600 !important; font-size: 0.85rem !important;
+    padding: 0.5rem 1.2rem !important; transition: all 0.2s !important; border: none !important;
 }
 button[data-baseweb="tab"][aria-selected="true"] {
-    background: linear-gradient(135deg, #b8720a, #e8a020) !important;
-    color: #fff !important;
+    background: linear-gradient(135deg, #b8720a, #e8a020) !important; color: #fff !important;
 }
 [data-testid="stTabs"] [role="tabpanel"] { padding-top: 1.5rem; }
 
-/* ── Divider ── */
+/* ── Misc ── */
 hr { border: none !important; border-top: 1px solid #e8e4dc !important; margin: 1rem 0 !important; }
-
-/* ── Alerts ── */
 .stAlert { border-radius: 10px !important; font-family: 'Sora', sans-serif !important; }
-
-/* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: #f0ede8; }
 ::-webkit-scrollbar-thumb { background: #d4cfc8; border-radius: 2px; }
 
 /* ── App header ── */
 .app-header {
-    background: #fff;
-    border-bottom: 1px solid #e8e4dc;
-    padding: 1.1rem 2rem;
-    margin: 0 -2rem 1.5rem -2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 0.8rem;
-    box-shadow: 0 1px 6px rgba(0,0,0,.05);
+    background: #fff; border-bottom: 1px solid #e8e4dc;
+    padding: 1.1rem 2rem; margin: 0 -2rem 1.5rem -2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 0.8rem; box-shadow: 0 1px 6px rgba(0,0,0,.05);
 }
 .app-header h1 { font-size: 1.4rem !important; font-weight: 800 !important; color: #b8720a !important; margin: 0 !important; }
 .app-header p  { font-size: 0.72rem; color: #aaa; margin: 2px 0 0; }
@@ -181,6 +129,20 @@ hr { border: none !important; border-top: 1px solid #e8e4dc !important; margin: 
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
 .badge-green { background: #edfaed; border: 1px solid #4caf50; color: #2e7d32; }
 .badge-red   { background: #fdecea; border: 1px solid #f44336; color: #c62828; }
+
+/* ── Item picker panel ── */
+.picker-panel {
+    background: #fff;
+    border: 1px solid #e8e4dc;
+    border-radius: 16px;
+    padding: 1.2rem 1.4rem;
+    margin-bottom: 1.2rem;
+    box-shadow: 0 1px 6px rgba(0,0,0,.05);
+}
+.picker-title {
+    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.12em; color: #bbb; margin-bottom: 0.9rem;
+}
 
 /* ── Section title ── */
 .section-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #bbb; margin-bottom: 0.8rem; }
@@ -195,21 +157,13 @@ hr { border: none !important; border-top: 1px solid #e8e4dc !important; margin: 
 
 /* ── Bill receipt ── */
 .bill-receipt {
-    background: #fffdf7;
-    border-radius: 14px;
-    padding: 26px 30px;
-    border: 1px solid #e8d8b0;
-    box-shadow: 0 4px 20px rgba(184,114,10,.08);
-    font-family: 'JetBrains Mono', monospace;
-    color: #1a1200;
-    position: relative;
-    overflow: hidden;
+    background: #fffdf7; border-radius: 14px; padding: 26px 30px;
+    border: 1px solid #e8d8b0; box-shadow: 0 4px 20px rgba(184,114,10,.08);
+    font-family: 'JetBrains Mono', monospace; color: #1a1200;
+    position: relative; overflow: hidden;
 }
 .bill-receipt::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 4px;
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
     background: linear-gradient(90deg, #b8720a, #e8a020, #f5c842, #e8a020, #b8720a);
 }
 .bill-receipt pre { margin: 0; font-size: 0.77rem; line-height: 1.9; background: transparent; color: #1a1200; white-space: pre; font-family: 'JetBrains Mono', monospace; }
@@ -222,11 +176,11 @@ hr { border: none !important; border-top: 1px solid #e8e4dc !important; margin: 
 .kpi-sub   { font-size: 0.75rem; color: #aaa; }
 
 /* ── Chart ── */
-.bar-row  { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.bar-name { font-size: 0.75rem; color: #aaa; width: 150px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-row   { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.bar-name  { font-size: 0.75rem; color: #aaa; width: 150px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar-track { flex: 1; background: #f0ede8; border-radius: 6px; height: 18px; overflow: hidden; }
 .bar-fill  { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #b8720a, #f5c842); }
-.bar-num  { font-size: 0.75rem; color: #555; font-weight: 600; width: 55px; text-align: right; flex-shrink: 0; }
+.bar-num   { font-size: 0.75rem; color: #555; font-weight: 600; width: 55px; text-align: right; flex-shrink: 0; }
 .chart-card { background: #fff; border: 1px solid #e8e4dc; border-radius: 16px; padding: 1.2rem 1.4rem; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
 .chart-card-title { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #bbb; margin-bottom: 1rem; }
 
@@ -242,28 +196,20 @@ hr { border: none !important; border-top: 1px solid #e8e4dc !important; margin: 
 .discount-pill { background: #edfaed; border: 1px solid #4caf50; color: #2e7d32; border-radius: 20px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; }
 
 /* ── Empty state ── */
-.empty-state { text-align: center; padding: 3rem 2rem; color: #ccc; }
-.empty-state .icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
+.empty-state { text-align: center; padding: 2.5rem 2rem; }
+.empty-state .icon { font-size: 2.5rem; margin-bottom: 0.8rem; opacity: 0.3; }
 .empty-state p { font-size: 0.85rem; margin: 0; color: #bbb; }
 
-/* ── Pending order card ── */
+/* ── Pending cards ── */
 .pending-card {
-    background: #fff;
-    border: 1.5px solid #e8e4dc;
-    border-radius: 16px;
-    margin-bottom: 14px;
-    overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0,0,0,.05);
-    transition: box-shadow 0.2s;
+    background: #fff; border: 1.5px solid #e8e4dc; border-radius: 16px;
+    margin-bottom: 14px; overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,.05); transition: box-shadow 0.2s;
 }
 .pending-card:hover { box-shadow: 0 4px 20px rgba(184,114,10,.12); border-color: #e8a020; }
-
 .pending-card-header {
-    background: #fffbf4;
-    padding: 12px 18px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    background: #fffbf4; padding: 12px 18px;
+    display: flex; justify-content: space-between; align-items: center;
     border-bottom: 1px solid #f0e8d8;
 }
 .pending-token { font-size: 1rem; font-weight: 800; color: #b8720a; font-family: 'JetBrains Mono', monospace; }
@@ -271,49 +217,16 @@ hr { border: none !important; border-top: 1px solid #e8e4dc !important; margin: 
 .pending-status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e8a020; margin-right: 8px; animation: pulse 1.5s infinite; }
 @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
 
-.pending-card-body { padding: 14px 18px; }
-.pending-item-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 0.83rem; border-bottom: 1px solid #f5f2ec; }
-.pending-item-row:last-child { border-bottom: none; }
-.pending-item-name { color: #333; font-weight: 500; }
-.pending-item-amt  { color: #888; font-size: 0.8rem; }
-
-.pending-footer {
-    background: #fafaf8;
-    border-top: 1px solid #f0e8d8;
-    padding: 12px 18px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.pending-total-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .08em; color: #bbb; font-weight: 700; }
-.pending-total-amt   { font-size: 1.5rem; font-weight: 800; color: #b8720a; }
-.pending-discount    { font-size: 0.75rem; color: #2e7d32; background: #edfaed; padding: 2px 10px; border-radius: 20px; font-weight: 600; }
-
 /* ── Live counter ── */
 .live-counter {
-    background: #fff8ec;
-    border: 1.5px solid #f5c842;
-    border-radius: 14px;
-    padding: 16px 22px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.4rem;
+    background: #fff8ec; border: 1.5px solid #f5c842; border-radius: 14px;
+    padding: 16px 22px; display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 1.4rem;
     box-shadow: 0 2px 10px rgba(184,114,10,.08);
 }
 .live-counter-label  { font-size: 0.7rem; color: #b8720a; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; margin-bottom: 4px; }
 .live-counter-value  { font-size: 1.6rem; font-weight: 800; color: #b8720a; display: inline; }
 .live-counter-amount { font-size: 0.9rem; color: #e8a020; font-weight: 600; margin-left: 12px; }
-
-/* Sidebar pending badge */
-.sb-pending {
-    background: #fff8ec;
-    border: 1px solid #f5c842;
-    border-radius: 12px;
-    padding: 14px 16px;
-    text-align: center;
-    margin-top: 4px;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -376,6 +289,7 @@ def load_bills_from_sheet(_ws):
 if "cart"           not in st.session_state: st.session_state.cart = {}
 if "bill_counter"   not in st.session_state: st.session_state.bill_counter = None
 if "pending_orders" not in st.session_state: st.session_state.pending_orders = []
+if "confirm_reset"  not in st.session_state: st.session_state.confirm_reset = False
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 ALL_ITEMS = {k: v for cat in MENU.values() for k, v in cat.items()}
@@ -439,7 +353,7 @@ def make_bill_text(order):
               "", f"{'Ek Chai Ho Jaye? ☕':^44}", f"{'Thank you for visiting!':^44}"]
     return "\n".join(lines)
 
-# ── Connect ───────────────────────────────────────────────────────────────────
+# ── Connect to Google Sheets ───────────────────────────────────────────────────
 ws, gs_error = get_worksheet()
 if ws is not None:
     all_bills = load_bills_from_sheet(ws)
@@ -449,50 +363,6 @@ else:
     all_bills = []
     if st.session_state.bill_counter is None:
         st.session_state.bill_counter = random.randint(1000, 1099)
-
-# ══════════════════════════════════════════════════════════════════════════════
-# SIDEBAR
-# ══════════════════════════════════════════════════════════════════════════════
-with st.sidebar:
-    st.markdown("<div class='sidebar-banner'><h2>☕ UPSARPANCH CHAIFI</h2><p>Warm Moments, Great Flavors</p></div>", unsafe_allow_html=True)
-
-    category = st.selectbox("Category", list(MENU.keys()))
-    item     = st.selectbox("Item", list(MENU[category].keys()))
-    price    = MENU[category][item]
-    qty      = st.number_input("Quantity", min_value=1, max_value=20, value=1, step=1)
-
-    st.markdown(
-        f"<div style='background:#fffbf4;border:1px solid #f0e0b0;border-radius:10px;padding:10px 14px;"
-        f"margin:8px 0;display:flex;justify-content:space-between;align-items:center'>"
-        f"<span style='color:#aaa;font-size:.8rem'>Subtotal</span>"
-        f"<span style='color:#b8720a;font-weight:800;font-size:.95rem'>₹ {price * qty}</span>"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
-    if st.button("＋  Add to Order", use_container_width=True):
-        st.session_state.cart[item] = st.session_state.cart.get(item, 0) + qty
-        st.success(f"Added {qty}× {clean(item)}")
-
-    if st.session_state.cart:
-        st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-        if st.button("🗑  Clear Cart", use_container_width=True):
-            st.session_state.cart = {}
-            st.rerun()
-
-    st.markdown("<hr>", unsafe_allow_html=True)
-
-    p_count = len(st.session_state.pending_orders)
-    p_total = sum(o["total"] for o in st.session_state.pending_orders)
-    st.markdown(
-        f"<div class='sb-pending'>"
-        f"<div style='font-size:.68rem;color:#b8720a;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px'>Pending Orders</div>"
-        f"<div style='font-size:1.5rem;font-weight:800;color:#b8720a'>{p_count}</div>"
-        f"<div style='font-size:.78rem;color:#e8a020;font-weight:600'>₹ {p_total:,} unpaid</div>"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:.68rem;color:#ccc;text-align:center;margin:0'>GF-27, Migsun Twiinz<br>Sector – Eta-2, Greater Noida</p>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # APP HEADER
@@ -523,12 +393,47 @@ tab_new, tab_pending, tab_sales = st.tabs([
 
 # ════════════════════════ TAB 1 — NEW ORDER ═══════════════════════════════════
 with tab_new:
+
+    # ── Item picker (replaces sidebar) ────────────────────────────────────────
+    st.markdown("<div class='picker-title'>Add Item to Order</div>", unsafe_allow_html=True)
+    with st.container():
+        pc1, pc2, pc3, pc4 = st.columns([1.6, 2.4, 0.8, 1.2])
+        with pc1:
+            category = st.selectbox("Category", list(MENU.keys()), label_visibility="collapsed")
+        with pc2:
+            item  = st.selectbox("Item", list(MENU[category].keys()), label_visibility="collapsed")
+            price = MENU[category][item]
+        with pc3:
+            qty = st.number_input("Qty", min_value=1, max_value=20, value=1, step=1, label_visibility="collapsed")
+        with pc4:
+            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+            if st.button(f"＋ Add  ·  ₹ {price * qty}", use_container_width=True):
+                st.session_state.cart[item] = st.session_state.cart.get(item, 0) + qty
+                st.rerun()
+
+    st.markdown("<hr>", unsafe_allow_html=True)
+
+    # ── Cart + Bill ───────────────────────────────────────────────────────────
     col_order, col_bill = st.columns([1.1, 1], gap="large")
 
     with col_order:
-        st.markdown("<div class='section-title'>Current Cart</div>", unsafe_allow_html=True)
+        # Cart count header
+        cart_total_items = sum(st.session_state.cart.values())
+        header_right = f"<span style='color:#b8720a;font-weight:700'>{cart_total_items} items</span>" if st.session_state.cart else ""
+        st.markdown(
+            f"<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem'>"
+            f"<div class='section-title' style='margin:0'>Current Cart</div>"
+            f"{header_right}"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
         if not st.session_state.cart:
-            st.markdown("<div class='empty-state'><div class='icon'>🛒</div><p>Cart is empty.<br>Pick items from the sidebar.</p></div>", unsafe_allow_html=True)
+            st.markdown(
+                "<div class='empty-state'><div class='icon'>🛒</div>"
+                "<p>Cart is empty.<br>Select an item above and click Add.</p></div>",
+                unsafe_allow_html=True,
+            )
         else:
             to_remove = []
             for idx, (name, qty) in enumerate(st.session_state.cart.items()):
@@ -573,6 +478,11 @@ with tab_new:
                     unsafe_allow_html=True,
                 )
 
+            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+            if st.button("🗑  Clear Cart", use_container_width=True):
+                st.session_state.cart = {}
+                st.rerun()
+
     with col_bill:
         st.markdown("<div class='section-title'>Order Details & Bill Preview</div>", unsafe_allow_html=True)
         customer = st.text_input("Customer Name", placeholder="Walk-in customer")
@@ -597,7 +507,7 @@ with tab_new:
             st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
             st.markdown(
                 "<p style='font-size:.73rem;color:#bbb;margin-bottom:6px'>"
-                "Customer will pay later — order goes to the Pending queue.</p>",
+                "Customer pays later — order goes to the Pending queue.</p>",
                 unsafe_allow_html=True,
             )
             if st.button("📋  Place Order → Pending", use_container_width=True):
@@ -617,7 +527,11 @@ with tab_new:
                 st.success(f"✅ Order #{bill_no} placed! Go to ⏳ Pending Orders to mark as paid.")
                 st.rerun()
         else:
-            st.markdown("<div class='empty-state'><div class='icon'>🧾</div><p>Bill preview will appear<br>once you add items.</p></div>", unsafe_allow_html=True)
+            st.markdown(
+                "<div class='empty-state'><div class='icon'>🧾</div>"
+                "<p>Bill preview will appear<br>once you add items.</p></div>",
+                unsafe_allow_html=True,
+            )
 
 # ════════════════════════ TAB 2 — PENDING ORDERS ══════════════════════════════
 with tab_pending:
@@ -636,11 +550,9 @@ with tab_pending:
         total_pending_amt = sum(o["total"] for o in pending)
         st.markdown(
             f"<div class='live-counter'>"
-            f"<div>"
-            f"<div class='live-counter-label'>Orders waiting for payment</div>"
+            f"<div><div class='live-counter-label'>Orders waiting for payment</div>"
             f"<div><span class='live-counter-value'>{len(pending)} orders</span>"
-            f"<span class='live-counter-amount'>· ₹ {total_pending_amt:,} total unpaid</span></div>"
-            f"</div>"
+            f"<span class='live-counter-amount'>· ₹ {total_pending_amt:,} total unpaid</span></div></div>"
             f"<div style='font-size:2.5rem;opacity:.3'>⏳</div>"
             f"</div>",
             unsafe_allow_html=True,
@@ -649,25 +561,20 @@ with tab_pending:
         to_remove_ids = []
 
         for order in pending:
-            # Token pill
-            if order["token"] != "—":
-                token_html = f"<span style='font-size:.78rem;color:#b8720a;background:#fff8ec;padding:2px 10px;border-radius:8px;font-weight:600;margin-left:8px'>{order['token']}</span>"
-            else:
-                token_html = ""
-
-            # Discount pill
-            if order["discount"]:
-                disc_html = f"<span style='font-size:.75rem;color:#2e7d32;background:#edfaed;padding:2px 10px;border-radius:20px;font-weight:600'>🏷 -₹{order['discount']}</span>"
-            else:
-                disc_html = ""
-
-            # Item count summary (no prices, just names)
+            token_html = (
+                f"<span style='font-size:.78rem;color:#b8720a;background:#fff8ec;"
+                f"padding:2px 10px;border-radius:8px;font-weight:600;margin-left:8px'>{order['token']}</span>"
+                if order["token"] != "—" else ""
+            )
+            disc_html = (
+                f"<span style='font-size:.75rem;color:#2e7d32;background:#edfaed;"
+                f"padding:2px 10px;border-radius:20px;font-weight:600'>🏷 -₹{order['discount']}</span>"
+                if order["discount"] else ""
+            )
             item_summary = ", ".join(f"{clean(n)} ×{q}" for n, q in order["items"].items())
 
             st.markdown(
                 f"<div class='pending-card'>"
-
-                # Header row — bill no, token, customer, time
                 f"<div class='pending-card-header'>"
                 f"<div style='display:flex;align-items:center;flex-wrap:wrap;gap:6px'>"
                 f"<span class='pending-status-dot'></span>"
@@ -677,22 +584,17 @@ with tab_pending:
                 f"</div>"
                 f"<span class='pending-time'>{order['timestamp'].strftime('%I:%M %p')}</span>"
                 f"</div>"
-
-                # Body — just amount + item names summary
                 f"<div style='padding:16px 18px;display:flex;justify-content:space-between;align-items:center'>"
                 f"<div style='font-size:.78rem;color:#bbb;max-width:60%'>{item_summary}</div>"
                 f"<div style='text-align:right'>"
                 f"<div style='font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:#bbb;font-weight:700'>Total Due</div>"
                 f"<div style='font-size:1.7rem;font-weight:800;color:#b8720a;line-height:1.1'>₹ {order['total']}</div>"
                 f"<div style='margin-top:4px'>{disc_html}</div>"
-                f"</div>"
-                f"</div>"
-
+                f"</div></div>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
 
-            # Action buttons
             bc1, bc2, bc3 = st.columns([2.2, 1, 0.9])
             with bc1:
                 if st.button(f"✅  Mark as Paid  ·  ₹ {order['total']}", key=f"pay_{order['id']}", use_container_width=True):
@@ -733,9 +635,9 @@ with tab_sales:
     week_bills  = bills_in_range(all_bills, week_start,  today)
     month_bills = bills_in_range(all_bills, month_start, today)
 
-    day_rev,  day_cnt,  day_avg,  _ = sales_summary(day_bills)
-    wk_rev,   wk_cnt,   wk_avg,   _ = sales_summary(week_bills)
-    mo_rev,   mo_cnt,   mo_avg,   _ = sales_summary(month_bills)
+    day_rev, day_cnt, day_avg, _ = sales_summary(day_bills)
+    wk_rev,  wk_cnt,  wk_avg,  _ = sales_summary(week_bills)
+    mo_rev,  mo_cnt,  mo_avg,  _ = sales_summary(month_bills)
 
     st.markdown("<div class='section-title'>Revenue at a Glance</div>", unsafe_allow_html=True)
     k1, k2, k3 = st.columns(3, gap="medium")
@@ -808,6 +710,7 @@ with tab_sales:
                 unsafe_allow_html=True,
             )
 
+    # ── Sheet management ──────────────────────────────────────────────────────
     if ws is not None:
         st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
         st.markdown("<hr>", unsafe_allow_html=True)
@@ -820,17 +723,16 @@ with tab_sales:
                 st.rerun()
         with m2:
             if st.button("🗑️  Reset All Sheet Data", use_container_width=True):
-                st.session_state["confirm_reset"] = True
+                st.session_state.confirm_reset = True
 
-        if st.session_state.get("confirm_reset", False):
+        if st.session_state.confirm_reset:
             st.markdown(
                 "<div style='background:#fff5f5;border:1.5px solid #f44336;border-radius:12px;"
                 "padding:16px 20px;margin-top:12px'>"
                 "<div style='font-weight:700;color:#c62828;font-size:.9rem;margin-bottom:6px'>"
                 "⚠️ Are you sure you want to reset all data?</div>"
                 "<div style='font-size:.8rem;color:#888'>This will permanently delete all bill records "
-                "from the Google Sheet and reset the bill counter to #1001. "
-                "This cannot be undone.</div>"
+                "from the Google Sheet and reset the bill counter to #1001. This cannot be undone.</div>"
                 "</div>",
                 unsafe_allow_html=True,
             )
@@ -844,7 +746,7 @@ with tab_sales:
                         st.session_state.bill_counter   = 1001
                         st.session_state.pending_orders = []
                         st.session_state.cart           = {}
-                        st.session_state["confirm_reset"] = False
+                        st.session_state.confirm_reset  = False
                         load_bills_from_sheet.clear()
                         st.success("✅ Sheet reset! Bill counter starts from #1001.")
                         st.rerun()
@@ -852,7 +754,7 @@ with tab_sales:
                         st.error(f"Reset failed: {e}")
             with c2:
                 if st.button("✕  Cancel", use_container_width=True):
-                    st.session_state["confirm_reset"] = False
+                    st.session_state.confirm_reset = False
                     st.rerun()
 
 # ── Footer ─────────────────────────────────────────────────────────────────────
