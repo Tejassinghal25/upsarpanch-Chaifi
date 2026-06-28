@@ -1,5 +1,8 @@
 import streamlit as st
 from datetime import datetime, date, timedelta
+from zoneinfo import ZoneInfo
+
+IST = ZoneInfo('Asia/Kolkata')
 import random
 import json
 from collections import defaultdict
@@ -330,27 +333,56 @@ def bar_chart_html(items, max_qty):
     return html
 
 def make_bill_text(order):
+    # Ensure IST timezone
+    ts = order["timestamp"]
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=IST)
+    ts_ist = ts.astimezone(IST)
+
+    W = 44  # receipt width, ASCII-only so alignment is reliable
+
+    def center(t):
+        return t.center(W)
+
+    def money_row(label, amt, negative=False):
+        prefix = "-Rs " if negative else " Rs "
+        return f"  {label:<28}{prefix}{amt:>5}"
+
     lines = [
-        f"{'★  UPSARPANCH  CHAIFI  ★':^44}",
-        f"{'The CHAI FI Caffe':^44}",
-        f"{'GF-27 Migsun Twiinz, Eta-2':^44}",
-        f"{'Greater Noida':^44}",
-        "·" * 44,
-        f"  Bill No : #{order['bill_no']:<10} Date: {order['timestamp'].strftime('%d %b %Y')}",
-        f"  Time    : {order['timestamp'].strftime('%I:%M %p')}",
+        center("* UPSARPANCH CHAIFI *"),
+        center("The CHAI FI Caffe"),
+        center("GF-27 Migsun Twiinz, Eta-2"),
+        center("Greater Noida"),
+        "." * W,
+        f"  Bill No : #{str(order['bill_no']):<8}  {ts_ist.strftime('%d %b %Y')}",
+        f"  Time    : {ts_ist.strftime('%I:%M %p')} IST",
     ]
-    if order["customer"] != "Walk-in": lines.append(f"  Customer: {order['customer']}")
-    if order["token"] != "—":          lines.append(f"  Token   : {order['token']}")
-    lines += ["─"*44, f"  {'ITEM':<24}{'QTY':>5}  {'AMT':>8}", "─"*44]
+    if order["customer"] != "Walk-in":
+        lines.append(f"  Customer: {order['customer']}")
+    if order["token"] != "—":
+        lines.append(f"  Token   : {order['token']}")
+
+    lines += [
+        "-" * W,
+        f"  {'ITEM':<22}  {'QTY':>3}   {'AMT':>6}",
+        "-" * W,
+    ]
     for name, qty in order["items"].items():
         rt   = ALL_ITEMS[name] * qty
         disp = clean(name)[:22]
-        lines.append(f"  {disp:<24}{qty:>5}  ₹{rt:>6}")
-    lines += ["─"*44, f"  {'Subtotal':<30}₹{order['subtotal']:>8}"]
+        lines.append(f"  {disp:<22}  {qty:>3}   Rs{rt:>4}")
+
+    lines += ["-" * W, money_row("Subtotal", order['subtotal'])]
     if order["discount"]:
-        lines.append(f"  {'Discount (10% off ₹150+)':<30}-₹{order['discount']:>7}")
-    lines += ["═"*44, f"  {'TOTAL PAYABLE':<30}₹{order['total']:>8}", "═"*44,
-              "", f"{'Ek Chai Ho Jaye? ☕':^44}", f"{'Thank you for visiting!':^44}"]
+        lines.append(money_row("Discount (10% off Rs150+)", order['discount'], negative=True))
+    lines += [
+        "=" * W,
+        money_row("TOTAL PAYABLE", order['total']),
+        "=" * W,
+        "",
+        center("Ek Chai Ho Jaye? :)"),
+        center("Thank you for visiting!"),
+    ]
     return "\n".join(lines)
 
 # ── Connect to Google Sheets ───────────────────────────────────────────────────
