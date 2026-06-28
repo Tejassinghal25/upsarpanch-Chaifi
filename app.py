@@ -537,6 +537,10 @@ with tab_new:
 with tab_pending:
     pending = st.session_state.pending_orders
 
+    # track which order is in edit mode: {order_id: True/False}
+    if "editing_order" not in st.session_state:
+        st.session_state.editing_order = {}
+
     if not pending:
         st.markdown(
             "<div class='empty-state' style='padding:4rem'>"
@@ -561,20 +565,33 @@ with tab_pending:
         to_remove_ids = []
 
         for order in pending:
+            oid        = order["id"]
+            is_editing = st.session_state.editing_order.get(oid, False)
+
             token_html = (
                 f"<span style='font-size:.78rem;color:#b8720a;background:#fff8ec;"
                 f"padding:2px 10px;border-radius:8px;font-weight:600;margin-left:8px'>{order['token']}</span>"
                 if order["token"] != "—" else ""
             )
+
+            # Recalculate totals (may have been edited)
+            sub, disc, tot = calc_totals(order["items"])
+            order["subtotal"] = sub
+            order["discount"] = disc
+            order["total"]    = tot
+
             disc_html = (
                 f"<span style='font-size:.75rem;color:#2e7d32;background:#edfaed;"
-                f"padding:2px 10px;border-radius:20px;font-weight:600'>🏷 -₹{order['discount']}</span>"
-                if order["discount"] else ""
+                f"padding:2px 10px;border-radius:20px;font-weight:600'>🏷 -₹{disc}</span>"
+                if disc else ""
             )
             item_summary = ", ".join(f"{clean(n)} ×{q}" for n, q in order["items"].items())
 
+            # Card border changes when editing
+            edit_border = "border-color:#b8720a;box-shadow:0 0 0 3px rgba(184,114,10,.12);" if is_editing else ""
+
             st.markdown(
-                f"<div class='pending-card'>"
+                f"<div class='pending-card' style='{edit_border}'>"
                 f"<div class='pending-card-header'>"
                 f"<div style='display:flex;align-items:center;flex-wrap:wrap;gap:6px'>"
                 f"<span class='pending-status-dot'></span>"
@@ -588,17 +605,99 @@ with tab_pending:
                 f"<div style='font-size:.78rem;color:#bbb;max-width:60%'>{item_summary}</div>"
                 f"<div style='text-align:right'>"
                 f"<div style='font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:#bbb;font-weight:700'>Total Due</div>"
-                f"<div style='font-size:1.7rem;font-weight:800;color:#b8720a;line-height:1.1'>₹ {order['total']}</div>"
+                f"<div style='font-size:1.7rem;font-weight:800;color:#b8720a;line-height:1.1'>₹ {tot}</div>"
                 f"<div style='margin-top:4px'>{disc_html}</div>"
                 f"</div></div>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
 
-            bc1, bc2, bc3 = st.columns([2.2, 1, 0.9])
+            # ── EDIT PANEL (shown when editing) ───────────────────────────────
+            if is_editing:
+                st.markdown(
+                    "<div style='background:#fffbf4;border:1.5px solid #f0e0b0;border-radius:14px;"
+                    "padding:16px 18px;margin-top:-6px;margin-bottom:6px'>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    "<div style='font-size:.68rem;font-weight:700;text-transform:uppercase;"
+                    "letter-spacing:.1em;color:#b8720a;margin-bottom:10px'>✏️ Edit Order Items</div>",
+                    unsafe_allow_html=True,
+                )
+
+                # Existing items — edit qty or remove
+                items_to_remove = []
+                for eidx, (iname, iqty) in enumerate(list(order["items"].items())):
+                    iprice = ALL_ITEMS[iname]
+                    ec1, ec2, ec3, ec4 = st.columns([4, 1.3, 1.3, 0.7])
+                    ec1.markdown(
+                        f"<div style='padding:6px 0'>"
+                        f"<div style='font-size:.84rem;font-weight:600'>{clean(iname)}</div>"
+                        f"<div style='font-size:.7rem;color:#bbb'>₹ {iprice} each</div></div>",
+                        unsafe_allow_html=True,
+                    )
+                    new_iqty = ec2.number_input(
+                        "qty", min_value=0, max_value=50, value=iqty,
+                        key=f"eq_{oid}_{eidx}", label_visibility="collapsed"
+                    )
+                    if new_iqty != iqty:
+                        if new_iqty == 0:
+                            items_to_remove.append(iname)
+                        else:
+                            order["items"][iname] = new_iqty
+                        st.rerun()
+                    ec3.markdown(
+                        f"<div style='padding:6px 0;text-align:right;font-weight:700;color:#b8720a'>₹ {iprice * iqty}</div>",
+                        unsafe_allow_html=True,
+                    )
+                    if ec4.button("✕", key=f"erm_{oid}_{eidx}"):
+                        items_to_remove.append(iname)
+
+                for n in items_to_remove:
+                    order["items"].pop(n, None)
+                if items_to_remove:
+                    st.rerun()
+
+                # Add new item row
+                st.markdown("<hr style='margin:10px 0'>", unsafe_allow_html=True)
+                st.markdown(
+                    "<div style='font-size:.68rem;color:#aaa;font-weight:600;margin-bottom:6px'>ADD ITEM</div>",
+                    unsafe_allow_html=True,
+                )
+                na1, na2, na3, na4 = st.columns([1.6, 2.4, 0.8, 1.2])
+                with na1:
+                    add_cat  = st.selectbox("Cat", list(MENU.keys()), key=f"ecat_{oid}", label_visibility="collapsed")
+                with na2:
+                    add_item = st.selectbox("Item", list(MENU[add_cat].keys()), key=f"eitm_{oid}", label_visibility="collapsed")
+                with na3:
+                    add_qty  = st.number_input("Qty", min_value=1, max_value=20, value=1, key=f"eqty_{oid}", label_visibility="collapsed")
+                with na4:
+                    add_price = MENU[add_cat][add_item]
+                    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+                    if st.button(f"＋ Add · ₹{add_price * add_qty}", key=f"eadd_{oid}", use_container_width=True):
+                        order["items"][add_item] = order["items"].get(add_item, 0) + add_qty
+                        st.rerun()
+
+                # Save / discard edit
+                st.markdown("<hr style='margin:10px 0'>", unsafe_allow_html=True)
+                sv1, sv2 = st.columns(2, gap="medium")
+                with sv1:
+                    if st.button("💾  Save Changes", key=f"esave_{oid}", use_container_width=True):
+                        st.session_state.editing_order[oid] = False
+                        st.success("Order updated!")
+                        st.rerun()
+                with sv2:
+                    if st.button("✕  Discard", key=f"edisc_{oid}", use_container_width=True):
+                        st.session_state.editing_order[oid] = False
+                        st.rerun()
+
+                st.markdown("</div>", unsafe_allow_html=True)
+
+            # ── ACTION BUTTONS ────────────────────────────────────────────────
+            bc1, bc2, bc3, bc4 = st.columns([2.2, 0.9, 0.85, 0.85])
             with bc1:
-                if st.button(f"✅  Mark as Paid  ·  ₹ {order['total']}", key=f"pay_{order['id']}", use_container_width=True):
-                    to_remove_ids.append(order["id"])
+                if st.button(f"✅  Mark as Paid  ·  ₹ {tot}", key=f"pay_{oid}", use_container_width=True):
+                    to_remove_ids.append(oid)
                     if ws is not None:
                         try:
                             append_bill_to_sheet(ws, order)
@@ -607,19 +706,27 @@ with tab_pending:
                             st.error(f"Sheet save failed: {e}")
                     st.success(f"💰 Bill #{order['bill_no']} marked as paid!")
             with bc2:
+                edit_label = "✕ Close" if is_editing else "✏️  Edit"
+                if st.button(edit_label, key=f"edit_{oid}", use_container_width=True):
+                    st.session_state.editing_order[oid] = not is_editing
+                    st.rerun()
+            with bc3:
                 st.download_button(
                     "⬇  Bill", data=make_bill_text(order),
                     file_name=f"ChaiFi_Bill_{order['bill_no']}.txt",
-                    mime="text/plain", key=f"dl_{order['id']}", use_container_width=True,
+                    mime="text/plain", key=f"dl_{oid}", use_container_width=True,
                 )
-            with bc3:
-                if st.button("🗑 Cancel", key=f"cancel_{order['id']}", use_container_width=True):
-                    to_remove_ids.append(order["id"])
+            with bc4:
+                if st.button("🗑 Cancel", key=f"cancel_{oid}", use_container_width=True):
+                    to_remove_ids.append(oid)
 
-            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
         if to_remove_ids:
             st.session_state.pending_orders = [o for o in st.session_state.pending_orders if o["id"] not in to_remove_ids]
+            # clean up edit state for removed orders
+            for rid in to_remove_ids:
+                st.session_state.editing_order.pop(rid, None)
             st.rerun()
 
 # ════════════════════════ TAB 3 — SALES DASHBOARD ════════════════════════════
