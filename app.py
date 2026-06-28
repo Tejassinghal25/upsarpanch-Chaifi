@@ -390,7 +390,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
 ]
-SHEET_HEADERS = ["Bill No","Date","Time","Customer","Token","Items (JSON)","Subtotal","Discount","Total"]
+SHEET_HEADERS = ["Bill No","Date","Time","Customer","Token","Items (JSON)","Subtotal","Discount","Total","Payment Mode"]
 
 @st.cache_resource(show_spinner=False)
 def get_worksheet():
@@ -417,6 +417,7 @@ def append_bill_to_sheet(ws, bill):
         bill["customer"], bill["token"],
         json.dumps(bill["items"], ensure_ascii=False),
         bill["subtotal"], bill["discount"], bill["total"],
+        bill.get("payment_mode", "Cash"),
     ], value_input_option="USER_ENTERED")
 
 @st.cache_data(ttl=30, show_spinner=False)
@@ -425,14 +426,15 @@ def load_bills_from_sheet(_ws):
     for r in _ws.get_all_records():
         try:
             bills.append({
-                "bill_no":   int(r["Bill No"]),
-                "timestamp": datetime.strptime(f"{r['Date']} {r['Time']}", "%Y-%m-%d %H:%M:%S"),
-                "items":     json.loads(r["Items (JSON)"]),
-                "subtotal":  int(r["Subtotal"]),
-                "discount":  int(r["Discount"]),
-                "total":     int(r["Total"]),
-                "customer":  r["Customer"],
-                "token":     r["Token"],
+                "bill_no":      int(r["Bill No"]),
+                "timestamp":    datetime.strptime(f"{r['Date']} {r['Time']}", "%Y-%m-%d %H:%M:%S"),
+                "items":        json.loads(r["Items (JSON)"]),
+                "subtotal":     int(r["Subtotal"]),
+                "discount":     int(r["Discount"]),
+                "total":        int(r["Total"]),
+                "customer":     r["Customer"],
+                "token":        r["Token"],
+                "payment_mode": r.get("Payment Mode", "Cash"),
             })
         except Exception:
             continue
@@ -903,10 +905,36 @@ with tab_pending:
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
-            # ── ACTION BUTTONS ────────────────────────────────────────────────
+            # ── PAYMENT MODE + ACTION BUTTONS ─────────────────────────────
+            # Payment mode selector row
+            pm_col, _ = st.columns([2, 3])
+            with pm_col:
+                pay_mode = st.radio(
+                    "Payment Mode",
+                    ["💵  Cash", "📱  Online"],
+                    key=f"pm_{oid}",
+                    horizontal=True,
+                    label_visibility="collapsed",
+                )
+            pay_mode_clean = "Cash" if "Cash" in pay_mode else "Online"
+
+            # Styled payment mode indicator
+            pm_color   = "#2e7d32" if pay_mode_clean == "Cash" else "#1565c0"
+            pm_bg      = "#edfaed" if pay_mode_clean == "Cash" else "#e8f0fe"
+            pm_border  = "#4caf50" if pay_mode_clean == "Cash" else "#4285f4"
+            pm_icon    = "💵" if pay_mode_clean == "Cash" else "📱"
+            st.markdown(
+                f"<div style='display:inline-flex;align-items:center;gap:6px;"
+                f"background:{pm_bg};border:1px solid {pm_border};border-radius:20px;"
+                f"padding:4px 14px;font-size:.75rem;font-weight:700;color:{pm_color};"
+                f"margin-bottom:8px'>{pm_icon} {pay_mode_clean} Payment Selected</div>",
+                unsafe_allow_html=True,
+            )
+
             bc1, bc2, bc3, bc4 = st.columns([2.2, 0.9, 0.85, 0.85])
             with bc1:
-                if st.button(f"✅  Mark as Paid  ·  ₹ {tot}", key=f"pay_{oid}", use_container_width=True):
+                if st.button(f"✅  Mark as Paid  ·  Rs {tot}", key=f"pay_{oid}", use_container_width=True):
+                    order["payment_mode"] = pay_mode_clean
                     to_remove_ids.append(oid)
                     if ws is not None:
                         try:
@@ -914,7 +942,7 @@ with tab_pending:
                             load_bills_from_sheet.clear()
                         except Exception as e:
                             st.error(f"Sheet save failed: {e}")
-                    st.success(f"💰 Bill #{order['bill_no']} marked as paid!")
+                    st.success(f"💰 Bill #{order['bill_no']} paid via {pay_mode_clean}!")
             with bc2:
                 edit_label = "✕ Close" if is_editing else "✏️  Edit"
                 if st.button(edit_label, key=f"edit_{oid}", use_container_width=True):
@@ -1015,14 +1043,28 @@ with tab_sales:
     else:
         for b in hbills:
             items_str = " · ".join(f"{clean(n)} ×{q}" for n, q in b["items"].items())
-            disc_str  = f"&nbsp;<span class='discount-pill'>-₹{b['discount']}</span>" if b["discount"] else ""
+            disc_str  = f"&nbsp;<span class='discount-pill'>-Rs{b['discount']}</span>" if b["discount"] else ""
+            pmode     = b.get("payment_mode", "Cash")
+            pmode_color  = "#2e7d32" if pmode == "Cash" else "#1565c0"
+            pmode_bg     = "#edfaed" if pmode == "Cash" else "#e8f0fe"
+            pmode_border = "#4caf50" if pmode == "Cash" else "#4285f4"
+            pmode_icon   = "💵" if pmode == "Cash" else "📱"
+            pmode_html = (
+                f"<span style='background:{pmode_bg};border:1px solid {pmode_border};"
+                f"color:{pmode_color};border-radius:20px;padding:2px 9px;"
+                f"font-size:.68rem;font-weight:700'>{pmode_icon} {pmode}</span>"
+            )
             st.markdown(
                 f"<div class='history-card'>"
                 f"<div class='history-top'><span class='history-bill'>#{b['bill_no']}</span>"
                 f"<span class='history-time'>{b['timestamp'].strftime('%d %b %Y · %I:%M %p')}</span></div>"
                 f"<div class='history-items'>{items_str}</div>"
-                f"<div class='history-bottom'><span class='history-customer'>👤 {b['customer']}</span>"
-                f"<span class='history-total'>₹ {b['total']}{disc_str}</span></div>"
+                f"<div class='history-bottom'>"
+                f"<span class='history-customer'>👤 {b['customer']}</span>"
+                f"<div style='display:flex;align-items:center;gap:8px'>"
+                f"{pmode_html}"
+                f"<span class='history-total'>Rs {b['total']}{disc_str}</span>"
+                f"</div></div>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
@@ -1095,15 +1137,16 @@ with tab_table:
         for b in all_bills:
             items_str = ", ".join(f"{clean(n)} x{q}" for n, q in b["items"].items())
             rows.append({
-                "Bill No":    f"#{b['bill_no']}",
-                "Date":       b["timestamp"].strftime("%d %b %Y"),
-                "Time":       b["timestamp"].strftime("%I:%M %p"),
-                "Customer":   b["customer"],
-                "Token":      b["token"],
-                "Items":      items_str,
-                "Subtotal":   b["subtotal"],
-                "Discount":   b["discount"],
-                "Total (Rs)": b["total"],
+                "Bill No":      f"#{b['bill_no']}",
+                "Date":         b["timestamp"].strftime("%d %b %Y"),
+                "Time":         b["timestamp"].strftime("%I:%M %p"),
+                "Customer":     b["customer"],
+                "Token":        b["token"],
+                "Items":        items_str,
+                "Subtotal":     b["subtotal"],
+                "Discount":     b["discount"],
+                "Total (Rs)":   b["total"],
+                "Payment Mode": b.get("payment_mode", "Cash"),
             })
 
         df_all = pd.DataFrame(rows)
@@ -1155,15 +1198,16 @@ with tab_table:
         for b in filtered_bills:
             items_str = ", ".join(f"{clean(n)} x{q}" for n, q in b["items"].items())
             rows_f.append({
-                "Bill No":    f"#{b['bill_no']}",
-                "Date":       b["timestamp"].strftime("%d %b %Y"),
-                "Time":       b["timestamp"].strftime("%I:%M %p"),
-                "Customer":   b["customer"],
-                "Token":      b["token"],
-                "Items":      items_str,
-                "Subtotal":   b["subtotal"],
-                "Discount":   b["discount"],
-                "Total (Rs)": b["total"],
+                "Bill No":      f"#{b['bill_no']}",
+                "Date":         b["timestamp"].strftime("%d %b %Y"),
+                "Time":         b["timestamp"].strftime("%I:%M %p"),
+                "Customer":     b["customer"],
+                "Token":        b["token"],
+                "Items":        items_str,
+                "Subtotal":     b["subtotal"],
+                "Discount":     b["discount"],
+                "Total (Rs)":   b["total"],
+                "Payment Mode": b.get("payment_mode", "Cash"),
             })
         df = pd.DataFrame(rows_f) if rows_f else pd.DataFrame(columns=list(df_all.columns))
 
