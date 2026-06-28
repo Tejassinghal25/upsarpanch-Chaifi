@@ -576,55 +576,62 @@ def bar_chart_html(items, max_qty):
     return html
 
 def make_bill_text(order):
-    # Ensure IST timezone
+    # Always use IST for timestamps
     ts = order["timestamp"]
     if ts.tzinfo is None:
         ts = ts.replace(tzinfo=IST)
     ts_ist = ts.astimezone(IST)
 
-    W = 44  # receipt width, ASCII-only so alignment is reliable
+    W = 42  # fixed receipt width — pure ASCII only
 
-    def center(t):
-        return t.center(W)
+    def ctr(t):
+        # centre using spaces only — no unicode padding issues
+        t = str(t)
+        pad = max(0, W - len(t))
+        return " " * (pad // 2) + t + " " * (pad - pad // 2)
 
-    def money_row(label, amt, negative=False):
-        prefix = "-Rs " if negative else " Rs "
-        return f"  {label:<28}{prefix}{amt:>5}"
+    def rule(ch="-"):
+        return ch * W
 
     lines = [
-        center("* UPSARPANCH CHAIFI *"),
-        center("The CHAI FI Caffe"),
-        center("GF-27 Migsun Twiinz, Eta-2"),
-        center("Greater Noida"),
-        "." * W,
-        f"  Bill No : #{str(order['bill_no']):<8}  {ts_ist.strftime('%d %b %Y')}",
-        f"  Time    : {ts_ist.strftime('%I:%M %p')} IST",
+        ctr("* UPSARPANCH CHAIFI *"),
+        ctr("The CHAI FI Caffe"),
+        ctr("GF-27 Migsun Twiinz, Eta-2"),
+        ctr("Greater Noida"),
+        rule("."),
+        f"  Bill  : #{order['bill_no']}",
+        f"  Date  : {ts_ist.strftime('%d %b %Y')}",
+        f"  Time  : {ts_ist.strftime('%I:%M %p')} IST",
     ]
-    if order["customer"] != "Walk-in":
-        lines.append(f"  Customer: {order['customer']}")
-    if order["token"] != "—":
-        lines.append(f"  Token   : {order['token']}")
+    if order["customer"] not in ("Walk-in", ""):
+        lines.append(f"  Name  : {order['customer']}")
+    if order["token"] not in ("--", "-", "—", ""):
+        lines.append(f"  Token : {order['token']}")
 
     lines += [
-        "-" * W,
-        f"  {'ITEM':<22}  {'QTY':>3}   {'AMT':>6}",
-        "-" * W,
+        rule(),
+        f"  {'ITEM':<20} {'QTY':>4} {'AMT':>7}",
+        rule(),
     ]
     for name, qty in order["items"].items():
-        rt   = ALL_ITEMS[name] * qty
-        disp = clean(name)[:22]
-        lines.append(f"  {disp:<22}  {qty:>3}   Rs{rt:>4}")
+        disp = clean(name)[:20]
+        amt  = ALL_ITEMS[name] * qty
+        lines.append(f"  {disp:<20} {qty:>4} Rs{amt:>5}")
 
-    lines += ["-" * W, money_row("Subtotal", order['subtotal'])]
-    if order["discount"]:
-        lines.append(money_row("Discount (10% off Rs150+)", order['discount'], negative=True))
     lines += [
-        "=" * W,
-        money_row("TOTAL PAYABLE", order['total']),
-        "=" * W,
+        rule(),
+        f"  {'Subtotal':<26} Rs{order['subtotal']:>5}",
+    ]
+    if order["discount"]:
+        lines.append(f"  {'Discount (10% off)':<26}-Rs{order['discount']:>4}")
+    lines += [
+        rule("="),
+        f"  {'TOTAL PAYABLE':<26} Rs{order['total']:>5}",
+        rule("="),
         "",
-        center("Ek Chai Ho Jaye? :)"),
-        center("Thank you for visiting!"),
+        ctr("Ek Chai Ho Jaye? :)"),
+        ctr("Thank you for visiting!"),
+        ctr("* Warm Moments, Great Flavors *"),
     ]
     return "\n".join(lines)
 
@@ -781,7 +788,7 @@ with tab_new:
 
         if st.session_state.cart:
             subtotal, discount_amt, total = calc_totals(st.session_state.cart)
-            now     = datetime.now()
+            now     = datetime.now(IST)
             bill_no = st.session_state.bill_counter
 
             preview = {
@@ -792,9 +799,14 @@ with tab_new:
                 "token":    token.strip() or "—",
             }
             st.markdown(
-                f"<div class='bill-receipt'><pre>{make_bill_text(preview)}</pre></div>",
+                "<div style='background:#fefcf5;border-radius:14px;padding:6px 0 0 0;"
+                "border:1px solid #e8d8a0;box-shadow:0 8px 40px rgba(0,0,0,.5);"
+                "overflow:hidden;position:relative'>"
+                "<div style='height:3px;background:linear-gradient(90deg,#9a5e08,#e8a020,#f5c842,#e8a020,#9a5e08)'></div>",
                 unsafe_allow_html=True,
             )
+            st.code(make_bill_text(preview), language=None)
+            st.markdown("</div>", unsafe_allow_html=True)
             st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
             st.markdown(
                 "<p style='font-size:.73rem;color:#bbb;margin-bottom:6px'>"
