@@ -1,6 +1,12 @@
 import streamlit as st
 from datetime import datetime, date, timedelta
 from zoneinfo import ZoneInfo
+import io
+try:
+    import openpyxl
+    HAS_OPENPYXL = True
+except ImportError:
+    HAS_OPENPYXL = False
 
 IST = ZoneInfo('Asia/Kolkata')
 import random
@@ -417,10 +423,11 @@ st.markdown(
 # TABS
 # ══════════════════════════════════════════════════════════════════════════════
 pending_count = len(st.session_state.pending_orders)
-tab_new, tab_pending, tab_sales = st.tabs([
+tab_new, tab_pending, tab_sales, tab_table = st.tabs([
     "🛒  New Order",
     f"⏳  Pending Orders  ({pending_count})",
     "📊  Sales Dashboard",
+    "📋  Orders Table",
 ])
 
 # ════════════════════════ TAB 1 — NEW ORDER ═══════════════════════════════════
@@ -895,6 +902,186 @@ with tab_sales:
                 if st.button("✕  Cancel", use_container_width=True):
                     st.session_state.confirm_reset = False
                     st.rerun()
+
+# ════════════════════════ TAB 4 — ORDERS TABLE ═══════════════════════════════
+with tab_table:
+    if ws is not None:
+        all_bills = load_bills_from_sheet(ws)
+
+    st.markdown("<div class='section-title'>All Orders — Till Date</div>", unsafe_allow_html=True)
+
+    if not all_bills:
+        st.markdown(
+            "<div class='empty-state'><div class='icon'>📋</div>"
+            "<p>No orders recorded yet.</p></div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        import pandas as pd
+
+        # ── Build dataframe ────────────────────────────────────────────────────
+        rows = []
+        for b in all_bills:
+            items_str = ", ".join(f"{clean(n)} x{q}" for n, q in b["items"].items())
+            rows.append({
+                "Bill No":    f"#{b['bill_no']}",
+                "Date":       b["timestamp"].strftime("%d %b %Y"),
+                "Time":       b["timestamp"].strftime("%I:%M %p"),
+                "Customer":   b["customer"],
+                "Token":      b["token"],
+                "Items":      items_str,
+                "Subtotal":   b["subtotal"],
+                "Discount":   b["discount"],
+                "Total (Rs)": b["total"],
+            })
+
+        df_all = pd.DataFrame(rows)
+
+        # ── Filters row ────────────────────────────────────────────────────────
+        f1, f2, f3 = st.columns([1.5, 1.5, 1])
+        with f1:
+            search_q = st.text_input("🔍 Search customer / token / item", placeholder="Type to filter...", key="tbl_search")
+        with f2:
+            date_filter = st.selectbox(
+                "📅 Date range",
+                ["All Time", "Today", "This Week", "This Month"],
+                key="tbl_date"
+            )
+        with f3:
+            st.markdown("<div style='height:26px'></div>", unsafe_allow_html=True)
+            sort_desc = st.checkbox("Newest first", value=True, key="tbl_sort")
+
+        # Apply date filter
+        today_d     = date.today()
+        week_start_d  = today_d - timedelta(days=today_d.weekday())
+        month_start_d = today_d.replace(day=1)
+
+        def date_filter_fn(b):
+            bd = b["timestamp"].date()
+            if date_filter == "Today":      return bd == today_d
+            if date_filter == "This Week":  return bd >= week_start_d
+            if date_filter == "This Month": return bd >= month_start_d
+            return True
+
+        filtered_bills = [b for b in all_bills if date_filter_fn(b)]
+
+        # Apply search filter
+        if search_q.strip():
+            q = search_q.strip().lower()
+            filtered_bills = [
+                b for b in filtered_bills
+                if q in b["customer"].lower()
+                or q in b["token"].lower()
+                or any(q in clean(n).lower() for n in b["items"])
+                or q in str(b["bill_no"])
+            ]
+
+        # Sort
+        filtered_bills = sorted(filtered_bills, key=lambda b: b["timestamp"], reverse=sort_desc)
+
+        # Rebuild df from filtered list
+        rows_f = []
+        for b in filtered_bills:
+            items_str = ", ".join(f"{clean(n)} x{q}" for n, q in b["items"].items())
+            rows_f.append({
+                "Bill No":    f"#{b['bill_no']}",
+                "Date":       b["timestamp"].strftime("%d %b %Y"),
+                "Time":       b["timestamp"].strftime("%I:%M %p"),
+                "Customer":   b["customer"],
+                "Token":      b["token"],
+                "Items":      items_str,
+                "Subtotal":   b["subtotal"],
+                "Discount":   b["discount"],
+                "Total (Rs)": b["total"],
+            })
+        df = pd.DataFrame(rows_f) if rows_f else pd.DataFrame(columns=list(df_all.columns))
+
+        # ── Summary strip above table ──────────────────────────────────────────
+        if rows_f:
+            total_rev  = sum(b["total"]    for b in filtered_bills)
+            total_disc = sum(b["discount"] for b in filtered_bills)
+            n_bills    = len(filtered_bills)
+            s1, s2, s3, s4 = st.columns(4, gap="medium")
+            for col, label, val in [
+                (s1, "Orders Shown",    str(n_bills)),
+                (s2, "Total Revenue",   f"Rs {total_rev:,}"),
+                (s3, "Total Discounts", f"Rs {total_disc:,}"),
+                (s4, "Avg Bill Value",  f"Rs {total_rev//n_bills if n_bills else 0:,}"),
+            ]:
+                col.markdown(
+                    f"<div style='background:#fff;border:1px solid #e8e4dc;border-radius:12px;"
+                    f"padding:12px 16px;box-shadow:0 1px 4px rgba(0,0,0,.04);margin-bottom:10px'>"
+                    f"<div style='font-size:.65rem;font-weight:700;text-transform:uppercase;"
+                    f"letter-spacing:.1em;color:#bbb;margin-bottom:4px'>{label}</div>"
+                    f"<div style='font-size:1.2rem;font-weight:800;color:#b8720a'>{val}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+
+        # ── Table ─────────────────────────────────────────────────────────────
+        if df.empty:
+            st.info("No orders match your filter.")
+        else:
+            st.dataframe(
+                df,
+                use_container_width=True,
+                height=min(40 + len(df) * 35, 500),
+                column_config={
+                    "Bill No":    st.column_config.TextColumn("Bill No",    width="small"),
+                    "Date":       st.column_config.TextColumn("Date",       width="small"),
+                    "Time":       st.column_config.TextColumn("Time",       width="small"),
+                    "Customer":   st.column_config.TextColumn("Customer",   width="medium"),
+                    "Token":      st.column_config.TextColumn("Token",      width="small"),
+                    "Items":      st.column_config.TextColumn("Items",      width="large"),
+                    "Subtotal":   st.column_config.NumberColumn("Subtotal", format="Rs %d", width="small"),
+                    "Discount":   st.column_config.NumberColumn("Discount", format="Rs %d", width="small"),
+                    "Total (Rs)": st.column_config.NumberColumn("Total",    format="Rs %d", width="small"),
+                },
+                hide_index=True,
+            )
+
+            # ── Download buttons ───────────────────────────────────────────────
+            st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+            dl1, dl2 = st.columns(2, gap="medium")
+
+            # CSV download
+            with dl1:
+                csv_data = df.to_csv(index=False)
+                st.download_button(
+                    "⬇  Download as CSV",
+                    data=csv_data,
+                    file_name=f"ChaiFi_Orders_{date.today().strftime('%d%b%Y')}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key="dl_csv",
+                )
+
+            # Excel download
+            with dl2:
+                excel_buf = io.BytesIO()
+                with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
+                    df.to_excel(writer, index=False, sheet_name="ChaiFi Orders")
+                    # Auto-fit columns
+                    ws_xl = writer.sheets["ChaiFi Orders"]
+                    for col_cells in ws_xl.columns:
+                        max_len = max(len(str(c.value or "")) for c in col_cells) + 3
+                        ws_xl.column_dimensions[col_cells[0].column_letter].width = min(max_len, 40)
+                excel_buf.seek(0)
+                st.download_button(
+                    "⬇  Download as Excel (.xlsx)",
+                    data=excel_buf.getvalue(),
+                    file_name=f"ChaiFi_Orders_{date.today().strftime('%d%b%Y')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                    key="dl_xlsx",
+                )
+
+    # Refresh button
+    if ws is not None:
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+        if st.button("🔄  Refresh Data", key="tbl_refresh", use_container_width=False):
+            load_bills_from_sheet.clear()
+            st.rerun()
 
 # ── Footer ─────────────────────────────────────────────────────────────────────
 st.markdown(
